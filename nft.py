@@ -18,8 +18,12 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 from config import CONFIG
 
 
-# Parse the configuration file and make sure it's valid
 def parse_config():
+    """
+    Parse the configuration file and make sure it's valid
+
+    :return:
+    """
     
     # Input traits must be placed in the assets folder. Change this value if you want to name it something else.
     assets_path = 'assets'
@@ -43,7 +47,8 @@ def parse_config():
         elif layer['rarity_weights'] == 'random':
             rarities = [random.random() for x in traits]
         elif type(layer['rarity_weights'] == 'list'):
-            assert len(traits) == len(layer['rarity_weights']), "Make sure you have the current number of rarity weights"
+            assert len(traits) == len(layer['rarity_weights']), "Make sure you have the current number of rarity" \
+                                                                " weights"
             rarities = layer['rarity_weights']
         else:
             raise ValueError("Rarity weights is invalid")
@@ -56,22 +61,43 @@ def parse_config():
         layer['traits'] = traits
 
 
-# Weight rarities and return a numpy array that sums up to 1
 def get_weighted_rarities(arr):
-    return np.array(arr)/ sum(arr)
+    """
+    Weight rarities and return a numpy array that sums up to 1
 
-# Generate a single image given an array of filepaths representing layers
+    :param arr:
+    :return:
+    """
+    return np.array(arr) / sum(arr)
+
+
 def generate_single_image(filepaths, output_filename=None):
+    """
+    Generate a single image given an array of filepaths representing layers
+
+    :param filepaths:
+    :param output_filename:
+    :return:
+
+    # Generate a single image with all possible traits
+    >>> generate_single_image(['Background/green.png',
+    'Body/brown.png',
+    'Expressions/standard.png',
+    'Head Gear/std_crown.png',
+    'Shirt/blue_dot.png',
+    'Misc/pokeball.png',
+    'Hands/standard.png',
+    'Wristband/yellow.png'])
+    """
     
     # Treat the first layer as the background
     bg = Image.open(os.path.join('assets', filepaths[0]))
-    
     
     # Loop through layers 1 to n and stack them on top of another
     for filepath in filepaths[1:]:
         if filepath.endswith('.png'):
             img = Image.open(os.path.join('assets', filepath))
-            bg.paste(img, (0,0), img)
+            bg.paste(img, (0, 0), img)
     
     # Save the final image into desired location
     if output_filename is not None:
@@ -83,19 +109,12 @@ def generate_single_image(filepaths, output_filename=None):
         bg.save(os.path.join('output', 'single_images', str(int(time.time())) + '.png'))
 
 
-# Generate a single image with all possible traits
-# generate_single_image(['Background/green.png', 
-#                        'Body/brown.png', 
-#                        'Expressions/standard.png',
-#                        'Head Gear/std_crown.png',
-#                        'Shirt/blue_dot.png',
-#                        'Misc/pokeball.png',
-#                        'Hands/standard.png',
-#                        'Wristband/yellow.png'])
-
-
-# Get total number of distinct possible combinations
 def get_total_combinations():
+    """
+    Get total number of distinct possible combinations
+
+    :return:
+    """
     
     total = 1
     for layer in CONFIG:
@@ -103,20 +122,30 @@ def get_total_combinations():
     return total
 
 
-# Select an index based on rarity weights
 def select_index(cum_rarities, rand):
+    """
+    Select an index based on rarity weights
+
+    :param cum_rarities:
+    :param rand:
+    :return:
+    """
     
     cum_rarities = [0] + list(cum_rarities)
     for i in range(len(cum_rarities) - 1):
-        if rand >= cum_rarities[i] and rand <= cum_rarities[i+1]:
+        if cum_rarities[i] <= rand <= cum_rarities[i + 1]:
             return i
     
     # Should not reach here if everything works okay
     return None
 
 
-# Generate a set of traits given rarities
 def generate_trait_set_from_config():
+    """
+    Generate a set of traits given rarities
+
+    :return:
+    """
     
     trait_set = []
     trait_paths = []
@@ -130,6 +159,19 @@ def generate_trait_set_from_config():
 
         # Select an element index based on random number and cumulative rarity weights
         idx = select_index(cum_rarities, rand_num)
+        # trait = traits[idx]
+
+        # Check if linked to another layer
+        if 'linked' in layer.keys():
+            linkedLayerName = layer['linked']
+            # find matching trait
+            linkedLayerDirectory = [layer for layer in CONFIG if linkedLayerName in layer['name']][0]['directory']
+            # scan trait_set for linkedDirectory
+            linkedTrait = [trait for trait in trait_set if linkedLayerDirectory in trait][0]
+            commonName = linkedTrait[:linkedTrait.rfind(linkedLayerDirectory)]
+            trait = [trait for trait in traits if commonName in trait][0]
+            idx = traits.index(trait)
+            print(f"\nLinking {trait} with {linkedTrait}")
 
         # Add selected trait to trait set
         trait_set.append(traits[idx])
@@ -142,8 +184,15 @@ def generate_trait_set_from_config():
     return trait_set, trait_paths
 
 
-# Generate the image set. Don't change drop_dup
 def generate_images(edition, count, drop_dup=True):
+    """
+    Generate the image set. Don't change drop_dup
+
+    :param edition:
+    :param count:
+    :param drop_dup:
+    :return:
+    """
     
     # Initialize an empty rarity table
     rarity_table = {}
@@ -179,7 +228,7 @@ def generate_images(edition, count, drop_dup=True):
             else:
                 rarity_table[CONFIG[idx]['name']].append('none')
     
-    # Create the final rarity table by removing duplicate creat
+    # Create the final rarity table by removing duplicate created
     rarity_table = pd.DataFrame(rarity_table).drop_duplicates()
     print("Generated %i images, %i are distinct" % (count, rarity_table.shape[0]))
     
@@ -190,22 +239,26 @@ def generate_images(edition, count, drop_dup=True):
         # Remove duplicate images
         print("Removing %i images..." % (len(img_tb_removed)))
 
-        #op_path = os.path.join('output', 'edition ' + str(edition))
+        # op_path = os.path.join('output', 'edition ' + str(edition))
         for i in img_tb_removed:
             os.remove(os.path.join(op_path, str(i).zfill(zfill_count) + '.png'))
 
-        # Rename images such that it is sequentialluy numbered
+        # Rename images such that it is sequentially numbered
         for idx, img in enumerate(sorted(os.listdir(op_path))):
             os.rename(os.path.join(op_path, img), os.path.join(op_path, str(idx).zfill(zfill_count) + '.png'))
-    
     
     # Modify rarity table to reflect removals
     rarity_table = rarity_table.reset_index()
     rarity_table = rarity_table.drop('index', axis=1)
     return rarity_table
 
-# Main function. Point of entry
+
 def main():
+    """
+    Main function. Point of entry
+
+    :return:
+    """
 
     print("Checking assets...")
     parse_config()
@@ -213,7 +266,7 @@ def main():
     print()
 
     tot_comb = get_total_combinations()
-    print("You can create a total of %i distinct avatars" % (tot_comb))
+    print("You can create a total of %i distinct avatars" % tot_comb)
     print()
 
     print("How many avatars would you like to create? Enter a number greater than 0: ")
