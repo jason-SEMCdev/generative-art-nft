@@ -9,13 +9,11 @@ import time
 import os
 import random
 from progressbar import progressbar
-
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
-
 # Import configuration file
 from config import CONFIG
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 def parse_config():
@@ -39,6 +37,7 @@ def parse_config():
 
         # If layer is not required, add a None to the start of the traits array
         if not layer['required']:
+            # noinspection PyTypeChecker
             traits = [None] + traits
         
         # Generate final rarity weights
@@ -80,14 +79,7 @@ def generate_single_image(filepaths, output_filename=None):
     :return:
 
     # Generate a single image with all possible traits
-    >>> generate_single_image(['Background/green.png',
-    'Body/brown.png',
-    'Expressions/standard.png',
-    'Head Gear/std_crown.png',
-    'Shirt/blue_dot.png',
-    'Misc/pokeball.png',
-    'Hands/standard.png',
-    'Wristband/yellow.png'])
+    >>> generate_single_image(['Background/green.png', 'Body/brown.png', 'Expressions/standard.png', 'Head Gear/std_crown.png', 'Shirt/blue_dot.png', 'Misc/pokeball.png', 'Hands/standard.png', 'Wristband/yellow.png'])
     """
     
     # Treat the first layer as the background
@@ -159,17 +151,16 @@ def generate_trait_set_from_config():
 
         # Select an element index based on random number and cumulative rarity weights
         idx = select_index(cum_rarities, rand_num)
-        # trait = traits[idx]
 
         # Check if linked to another layer
         if 'linked' in layer.keys():
             linkedLayerName = layer['linked']
             # find matching trait
-            linkedLayerDirectory = [layer for layer in CONFIG if linkedLayerName in layer['name']][0]['directory']
+            linkedLayerDirectory = [_layer for _layer in CONFIG if linkedLayerName in _layer['name']][0]['directory']
             # scan trait_set for linkedDirectory
-            linkedTrait = [trait for trait in trait_set if linkedLayerDirectory in trait][0]
+            linkedTrait = [_trait for _trait in trait_set if _trait and linkedLayerDirectory in _trait][0]
             commonName = linkedTrait[:linkedTrait.rfind(linkedLayerDirectory)]
-            trait = [trait for trait in traits if commonName in trait][0]
+            trait = [_trait for _trait in traits if _trait and commonName in _trait][0]
             idx = traits.index(trait)
             print(f"\nLinking {trait} with {linkedTrait}")
 
