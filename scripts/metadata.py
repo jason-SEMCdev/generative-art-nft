@@ -101,7 +101,7 @@ def main():
 
         # Write file to json folder
         item_json_path = os.path.join(json_path, str(idx))
-        with open(item_json_path, 'w') as f:
+        with open(item_json_path + '.json', 'w') as f:
             json.dump(item_json, f)
 
 
