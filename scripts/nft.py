@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import time
 import os
+import re
 import random
 from progressbar import progressbar
 import warnings
@@ -176,13 +177,14 @@ def generate_trait_set_from_config():
     return trait_set, trait_paths
 
 
-def generate_images(edition, count, drop_dup=True):
+def generate_images(edition, count, drop_dup=True, required=''):
     """
     Generate the image set. Don't change drop_dup
 
     :param edition:
     :param count:
     :param drop_dup:
+    :param required:    regex that need to be in at least one of the layers
     :return:
     """
     
@@ -210,6 +212,11 @@ def generate_images(edition, count, drop_dup=True):
         # Get a random set of valid traits based on rarity weights
         trait_sets, trait_paths = generate_trait_set_from_config()
 
+        if required:
+            # skip if required not in one of the traits
+            if not len([t for t in trait_sets if t and re.search(f'{required}.', t)]):
+                continue
+
         # Generate the actual image
         generate_single_image(trait_paths, os.path.join(op_path, image_name))
         
@@ -223,7 +230,7 @@ def generate_images(edition, count, drop_dup=True):
     # Create the final rarity table by removing duplicate created
     rarity_table = pd.DataFrame(rarity_table).drop_duplicates()
     print("Generated %i images, %i are distinct" % (count, rarity_table.shape[0]))
-    
+
     if drop_dup:
         # Get list of duplicate images
         img_tb_removed = sorted(list(set(range(count)) - set(rarity_table.index)))
@@ -270,10 +277,11 @@ def main():
     edition_name = input()
 
     print("Starting task...")
-    rt = generate_images(edition_name, num_avatars)
+    # rt = generate_images(edition_name, num_avatars)
+    rarity_table = generate_images(edition_name, num_avatars, required='sq.')
 
     print("Saving metadata...")
-    rt.to_csv(os.path.join('output', 'edition ' + str(edition_name), 'metadata.csv'))
+    rarity_table.to_csv(os.path.join('output', 'edition ' + str(edition_name), 'metadata.csv'))
 
     print("Task complete!")
 
