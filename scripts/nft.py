@@ -33,7 +33,8 @@ def parse_config():
         layer_path = os.path.join(assets_path, layer['directory'])
         
         # Get trait array in sorted order
-        traits = sorted([trait for trait in os.listdir(layer_path) if trait[0] != '.'])
+        # convert to lower to get true alphabetical order
+        traits = sorted([trait.lower() for trait in os.listdir(layer_path) if trait[0] != '.'])
 
         # If layer is not required, add a None to the start of the traits array
         if not layer['required']:
@@ -84,7 +85,7 @@ def generate_single_image(filepaths, output_filename=None):
     
     # Treat the first layer as the background
     bg = Image.open(os.path.join('assets', filepaths[0]))
-    
+
     # Loop through layers 1 to n and stack them on top of another
     for filepath in filepaths[1:]:
         if filepath.endswith('.png'):
@@ -155,9 +156,9 @@ def generate_trait_set_from_config():
         # Check if linked to another layer
         if 'linked' in layer.keys():
             linkedLayerName = layer['linked']
-            # find matching trait
+            # find matching trait, must have layer name as suffix in trait filename
             linkedLayerDirectory = [_layer for _layer in CONFIG if linkedLayerName in _layer['name']][0]['directory']
-            # scan trait_set for linkedDirectory
+            # scan trait_set for linkedDirectory, will find any word in linkedLayerName that is in already chosen trait
             linkedTrait = [_trait for _trait in trait_set if _trait and linkedLayerDirectory in _trait][0]
             commonName = linkedTrait[:linkedTrait.rfind(linkedLayerDirectory)]
             trait = [_trait for _trait in traits if _trait and commonName in _trait][0]
@@ -230,7 +231,6 @@ def generate_images(edition, count, drop_dup=True):
         # Remove duplicate images
         print("Removing %i images..." % (len(img_tb_removed)))
 
-        # op_path = os.path.join('output', 'edition ' + str(edition))
         for i in img_tb_removed:
             os.remove(os.path.join(op_path, str(i).zfill(zfill_count) + '.png'))
 
